@@ -22,6 +22,6 @@ if __name__ == '__main__':
                   'leave city_name blank and it will try to find you location')
 
         if sys.argv[1] != '-h':
-            main(city=sys.argv[1])
+            main(city=' '.join(sys.argv[1:]))
     else:
         main()
