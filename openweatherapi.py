@@ -35,6 +35,14 @@ class OpenWeather:
         self._call_modes = ['xml', 'html']
         self._token_types = ['q', 'id', 'latlon', 'zip']
 
+        self.icon_data = self._load_icon_data('icons.json')
+
+    @staticmethod
+    def _load_icon_data(file):
+        with open(file, 'r')as f:
+            data = json.load(f)
+        return data
+
     @staticmethod
     def _load_api_file(file):
         with open(file, 'r')as f:
@@ -49,7 +57,6 @@ class OpenWeather:
     @staticmethod
     def _get_city_list(url=r'http://bulk.openweathermap.org/sample/',
                        file=r'city.list.min.json.gz'):
-
         g_file = requests.get('{}{}'.format(url, file))
 
         if g_file.status_code == 404:
@@ -65,7 +72,6 @@ class OpenWeather:
             return False
 
     def _get_city_data(self, file='city.list.min.json'):
-
         if not os.path.isfile(file):
             self._get_city_list()
 
@@ -134,7 +140,7 @@ class OpenWeather:
     def _call_api(url, stream=False):
         return requests.get(url, stream=stream).json()
 
-    def get_weather(self, location_data, call_mode=None, conditions=None):
+    def get_weather(self, location_data, call_mode=None, conditions=None, format_response=True):
         token = self._query_token(location_data)
 
         if conditions not in self._call_types.keys():
@@ -142,4 +148,23 @@ class OpenWeather:
                                                                    str([k for k in self._call_types.keys()])))
         url = self._build_call_url(token=token, call_mode=call_mode, call_type=conditions)
         response = self._call_api(url)
-        return response, url
+        if not format_response:
+            return response, url
+        return self._format_weather_response(response), url
+
+    def _format_weather_response(self, response):
+        url = r'http://openweathermap.org/img/w/'
+        _weather_responses = response['weather']
+        _f_weather_responses = []
+        for r in _weather_responses:
+            info = self.icon_data[str(r['id'])]
+            r['long_description'] = info['label']
+            icon_info = {'icon_url': '{}{}.png'.format(url, r['icon']),
+                         'icon_description': info['icon']}
+            r['icon_info'] = icon_info
+
+            _f_weather_responses.append(r)
+        _n_response = response
+        _n_response['weather'] = _f_weather_responses
+
+        return _n_response
